@@ -1,0 +1,8 @@
+
+   New build number has been uploaded successfully to Firebase!
+    Platform : Android
+    BuildType : develop
+    Author : longbth-1474
+    Author email : tran.hoang.longb@sun-asterisk.com
+    Note : 2020-07-30 11:07:44   
+    

@@ -1,0 +1,52 @@
+name: CI
+on:
+  push:
+    branches: [ develop ]
+  pull_request:
+    branches: [ develop ]
+
+jobs:
+  build_app:
+    name: Build APK
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: subosito/flutter-action@v1
+        with:
+          channel: 'stable'
+      - run: flutter pub get
+      - name: Install FirebaseCLI
+        run: npm install -g firebase-tools
+      - name: decode google-service.json
+        env:
+          GOOGLE_SERVICE_ANDROID_DEV: ${{ secrets.GOOGLE_SERVICE_ANDROID_DEV }}
+        run: echo $GOOGLE_SERVICE_ANDROID_DEV > ./android/app/google-services.json
+      - name: Make gradlew executable
+        run: chmod +x ./android/gradlew
+      - name: Build Debug APK
+        run: fastlane buildApp
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: flutterci-apk
+          path: build/app/outputs/apk/develop/release/
+
+  beta_apk:
+    name: Upload
+    needs: [build_app]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          name: flutterci-apk
+          working-directory: build/app/outputs/apk/develop/release/
+      - name: upload artifact to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1.2.1
+        with:
+          appId: ${{ secrets.ANDROID_ID_FIREBASE_DEV }}
+          token: ${{ secrets.FIREBASE_TOKEN }}
+          groups: team-ci
+          file: build/app/outputs/apk/develop/release/app-develop-release.apk
+      - name: Push ChatWork
+        run: fastlane pushChatWork room_id:"193066762" token:${{ secrets.CHATWORK_API_TOKEN }}

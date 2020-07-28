@@ -1,0 +1,67 @@
+default_platform(:android)
+
+platform :android do
+ desc "Description of what the lane does"
+
+ lane :inputNote do |options|
+ 	releaseNoteInput = prompt(
+ 		text: "Please enter your release notes. This note will be pushed on Fabric: ",
+ 		multi_line_end_keyword: "END"
+ 		)
+ 	time1 = Time.new
+ 	time = time1.strftime("%Y-%m-%d %H:%M:%S")
+ 	releaseNote =   time + "   " + releaseNoteInput
+
+    #save to file
+    commit = last_git_commit
+    File.write("./temp/releaseNote.txt", releaseNote)
+    contentSave =
+    "
+   New build number has been uploaded successfully to Firebase!
+    Platform : #{options[:platform]}
+    BuildType : #{options[:buildType]}
+    Author : #{commit[:author]}
+    Author email : #{commit[:author_email]}
+    Note : #{releaseNote}
+    "
+    File.write("./temp/content.txt", contentSave)
+ end
+
+ lane :buildApp do
+     inputNote(buildType: "develop",platform:"Android")
+ 	 begin
+        gradle(task: 'clean', project_dir: 'android/')
+        gradle(task: 'assemble', build_type: 'developRelease', project_dir: 'android/')
+     rescue => ex
+        UI.error(ex)
+     next
+     end
+ end
+
+ lane :pushChatWork do |options|
+    	sendTo = "[To:3321859]"
+    	content = File.read("./temp/content.txt")
+        chatwork(
+            		message: "#{sendTo}
+            		#{content}",
+                roomid: options[:room_id],
+                success: true,
+                api_token: options[:token]
+                )
+ end
+
+ lane :distributeAndroidDev do |options|
+       releaseNote = File.read("./temp/releaseNote.txt")
+       groupTester = "team-ci"
+       firebase_app_distribution(
+           app: options[:app_id],
+           firebase_cli_token: options[:token],
+           release_notes: "#{releaseNote}",
+	       groups: "#{groupTester}",
+           firebase_cli_path: `which firebase`.strip(),
+           apk_path: options[:path]
+       )
+
+ end
+
+end

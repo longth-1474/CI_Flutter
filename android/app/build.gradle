@@ -1,0 +1,165 @@
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterRoot = localProperties.getProperty('flutter.sdk')
+if (flutterRoot == null) {
+    throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
+}
+
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
+
+project.ext.envConfigFiles = [
+        staging           : ".env.staging",
+        production        : ".env.production",
+        anothercustombuild: ".env",
+]
+
+apply from: project(':flutter_config').projectDir.getPath() + "/dotenv.gradle"
+import com.android.build.OutputFile
+
+// Create a variable called keystorePropertiesFile, and initialize it to your
+// keystore.properties file, in the rootProject folder.
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+
+// Initialize a new Properties() object called keystoreProperties.
+def keystoreProperties = new Properties()
+
+// Load your keystore.properties file into the keystoreProperties object.
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+def flutterVersionCode = project.env.get("VER_CODE")
+if (flutterVersionCode == null) {
+    flutterVersionCode = '1'
+}
+
+def flutterVersionName = project.env.get("VER_NAME")
+if (flutterVersionName == null) {
+    flutterVersionName = '1.0.0'
+}
+
+android {
+    compileSdkVersion 28
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    lintOptions {
+        disable 'InvalidPackage'
+    }
+
+    defaultConfig {
+        applicationId project.env.get("APP_ID")
+        minSdkVersion 16
+        targetSdkVersion 28
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        resValue "string", "build_config_package", "com.ci.flutter"
+    }
+
+    splits {
+        abi {
+            // Enable or disable building multiple APKs per ABI
+            reset()
+            enable false
+            universalApk false
+            include "armeabi-v7a", "arm64-v8a"
+        }
+    }
+
+    signingConfigs {
+        release {
+            if (keystoreProperties.
+                    getProperty('keyStoreFile')) {
+                storeFile file(keystoreProperties['keyStoreFile'])
+                storePassword keystoreProperties['keyStorePassword']
+                keyAlias keystoreProperties['keyStoreAlias']
+                keyPassword keystoreProperties['keyStoreAliasPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.release
+            debuggable true
+        }
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            shrinkResources true
+            useProguard true
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+        }
+    }
+
+    // applicationVariants are e.g. debug, release
+    applicationVariants.all { variant ->
+        variant.outputs.each { output ->
+            // For each separate APK per architecture, set a unique version code as described here:
+            // https://developer.android.com/studio/build/configure-apk-splits.html
+            def versionCodes = ["armeabi-v7a": 1, "x86": 2, "arm64-v8a": 3, "x86_64": 4]
+            def abi = output.getFilter(OutputFile.ABI)
+            if (abi != null) {  // null for the universal-debug, universal-release variants
+                output.versionCodeOverride =
+                        versionCodes.get(abi) * 1048576 + defaultConfig.versionCode
+            }
+
+        }
+    }
+
+    packagingOptions {
+        pickFirst '**/armeabi-v7a/libc++_shared.so'
+        pickFirst '**/x86/libc++_shared.so'
+        pickFirst '**/arm64-v8a/libc++_shared.so'
+        pickFirst '**/x86_64/libc++_shared.so'
+        pickFirst '**/x86/libjsc.so'
+        pickFirst '**/armeabi-v7a/libjsc.so'
+    }
+
+    flavorDimensions "environment"
+    productFlavors {
+        develop {
+            dimension "environment"
+        }
+        staging {
+            dimension "environment"
+        }
+        production {
+            dimension "environment"
+        }
+    }
+}
+
+flutter {
+    source '../..'
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '4.1'
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'androidx.test:runner:1.1.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.1.1'
+
+    implementation 'com.google.firebase:firebase-analytics:17.2.2'
+    // Add the Firebase SDK for Crashlytics.
+    implementation 'com.google.firebase:firebase-crashlytics:17.0.0-beta01'
+    implementation 'com.google.firebase:firebase-messaging:20.2.0'
+}
+
+apply plugin: 'com.google.firebase.crashlytics'
+apply plugin: 'com.google.gms.google-services'
