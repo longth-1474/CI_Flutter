@@ -8,14 +8,25 @@ on:
 jobs:
   build_app:
     name: Unit test
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            flutter_path: /opt/hostedtoolcache/flutter
+          - os: macos-latest
+            flutter_path: /Users/runner/hostedtoolcache/flutter
+      fail-fast: false
+    
     steps:
       - uses: actions/checkout@v2
       - name: Cache Flutter dependencies
         uses: actions/cache@v1
         with:
-          path: /opt/hostedtoolcache/flutter
-          key: macOS-flutter
+          path: ${{ matrix.flutter_path }}
+          key: ${{ runner.os }}-flutter 
       - uses: subosito/flutter-action@v1
         with:
           channel: 'stable'
