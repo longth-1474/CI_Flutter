@@ -75,16 +75,16 @@ jobs:
           name: flutterci-apk
           path: build/app/outputs/apk/develop/release/
 
-  #  beta_apk:
-  #    name: Upload
-  #    needs: [build_app]
-  #    runs-on: ubuntu-latest
-  #    steps:
-  #      - uses: actions/checkout@v2
-  #      - uses: actions/download-artifact@v2
-  #        with:
-  #          name: flutterci-apk
-  #          working-directory: build/app/outputs/apk/develop/release/
+  beta_apk:
+     name: Upload
+     needs: [build_app]
+     runs-on: ubuntu-latest
+     steps:
+       - uses: actions/checkout@v2
+       - uses: actions/download-artifact@v2
+         with:
+           name: flutterci-apk
+           working-directory: build/app/outputs/apk/develop/release/
   #      - name: upload artifact to Firebase App Distribution
   #        uses: wzieba/Firebase-Distribution-Github-Action@v1.2.1
   #        with:
@@ -92,9 +92,9 @@ jobs:
   #          token: ${{ secrets.FIREBASE_TOKEN }}
   #          groups: team-ci
   #          file: ./build/app/outputs/apk/develop/release/app-develop-release.apk
-  #      - name: Push ChatWork
-  #        run: fastlane pushChatWork room_id:"193066762" token:${{ secrets.CHATWORK_API_TOKEN }}
-
+       - name: Push ChatWork
+         run: fastlane pushChatWork room_id:"193066762" token:${{ secrets.CHATWORK_API_TOKEN }}
+  
   create_release:
     needs: [build_app]
     name: Release version
@@ -109,9 +109,5 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
-          body: |
-            Changes in this Release
-            - First Change
-            - Second Change
           draft: false
           prerelease: false
