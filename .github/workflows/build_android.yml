@@ -1,10 +1,7 @@
 name: Build & Release Android
 on:
-  release:
-    types: [published]
-  pull_request:
-    branches: [ develop ]
-  push:
+    release:
+      types: [published]
     tags:
       - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
 
@@ -56,8 +53,21 @@ jobs:
     needs: [check_unit_test]
     name: Build APK
     runs-on: macos-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        include:
+          - os: ubuntu-latest
+            flutter_path: /opt/hostedtoolcache/flutter
+      fail-fast: false
+
     steps:
       - uses: actions/checkout@v2
+      - name: Cache Flutter dependencies
+        uses: actions/cache@v1
+        with:
+          path: ${{ matrix.flutter_path }}
+          key: ${{ runner.OS }}-flutter-install-cache-${{ env.flutter_version }}
       - uses: subosito/flutter-action@v1
         with:
           channel: 'stable'
@@ -79,38 +89,26 @@ jobs:
           path: build/app/outputs/apk/develop/release/
 
   beta_apk:
-     name: Upload
-     needs: [build_app]
-     runs-on: ubuntu-latest
-     steps:
-       - uses: actions/checkout@v2
-       - uses: actions/download-artifact@v2
-         with:
-           name: flutterci-apk
-           working-directory: build/app/outputs/apk/develop/release/
-  #      - name: upload artifact to Firebase App Distribution
-  #        uses: wzieba/Firebase-Distribution-Github-Action@v1.2.1
-  #        with:
-  #          appId: ${{ secrets.ANDROID_ID_FIREBASE_DEV }}
-  #          token: ${{ secrets.FIREBASE_TOKEN }}
-  #          groups: team-ci
-  #          file: ./build/app/outputs/apk/develop/release/app-develop-release.apk
-       - name: Push ChatWork
-         run: fastlane pushChatWork room_id:"193066762" token:${{ secrets.CHATWORK_API_TOKEN }}
-  
-#   create_release:
-#     needs: [build_app]
-#     name: Release version
-#     runs-on: ubuntu-latest
-#     steps:
-#       - uses: actions/checkout@v2
-#       - name: Create Release
-#         id: create_release
-#         uses: actions/create-release@v1
-#         env:
-#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#         with:
-#           tag_name: ${{ github.ref }}
-#           release_name: Release ${{ github.ref }}
-#           draft: false
-#           prerelease: false
+    name: Upload
+    needs: [build_app]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-ruby@v1
+        with:
+          ruby-version: '2.6'
+      - name: Install Dependencies
+        run: gem install bundler && bundle install
+      - uses: actions/download-artifact@v2
+        with:
+          name: flutterci-apk
+          path: build/app/outputs/apk/develop/release/
+      - name: upload artifact to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1.2.1
+        with:
+          appId: ${{ secrets.ANDROID_ID_FIREBASE_DEV }}
+          token: ${{ secrets.FIREBASE_TOKEN }}
+          groups: team-ci
+          file: ./build/app/outputs/apk/develop/release/app-develop-release.apk
+      - name: Push ChatWork
+        run: fastlane pushChatWork room_id:"193066762" token:${{ secrets.CHATWORK_API_TOKEN }}
