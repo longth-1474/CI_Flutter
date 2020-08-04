@@ -1,11 +1,10 @@
 on:
   pull_request:
-    types: [opened]
     branches: [develop]
   check_suite:
     types: [completed]
   check_run:
-    types: [completed]  
+    types: [completed]
 
 jobs:
   apply_label_merged:
