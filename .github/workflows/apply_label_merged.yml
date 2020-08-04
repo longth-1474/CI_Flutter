@@ -1,11 +1,14 @@
 on:
+  pull_request:
+    types: [opened]
+    branches: [develop]
   check_suite:
     types: [completed]
   check_run:
     types: [completed]  
 
 jobs:
-  apply-label:
+  apply_label_merged:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/github-script@v2
