@@ -1,7 +1,8 @@
 on:
   check_suite:
-    types:
-      - completed
+    types: [completed]
+  check_run:
+    types: [completed]  
 
 jobs:
   apply-label:
