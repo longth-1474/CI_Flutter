@@ -7,45 +7,9 @@ jobs:
   check_unit_test:
     name: Unit test
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        include:
-          - os: ubuntu-latest
-            flutter_path: /opt/hostedtoolcache/flutter
-      fail-fast: false
-
     steps:
       - uses: actions/checkout@v2
-      - name: Cache Flutter dependencies
-        uses: actions/cache@v1
-        with:
-          path: ${{ matrix.flutter_path }}
-          key: ${{ runner.OS }}-flutter-install-cache-${{ env.flutter_version }}
-      - uses: subosito/flutter-action@v1
-        with:
-          channel: 'stable'
-      - run: flutter pub get
-      - name: Lint Code Base
-        uses: docker://github/super-linter:v3
-        env:
-          VALIDATE_ALL_CODEBASE: false
-          DEFAULT_BRANCH: develop
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - run: flutter test --coverage
-
-      - name: Coverage report
-        uses: codecov/codecov-action@v1
-        with:
-          file: ./coverage/lcov.info
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: coverage_ci
-          path: ./coverage/
+      - uses: ./.github/workflows/unit_test.yml
 
   build_app:
     needs: [check_unit_test]
