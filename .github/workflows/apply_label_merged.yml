@@ -1,8 +1,8 @@
 on:
   check_suite:
-    types: [completed]
+    types: [rerequested,completed]
   check_run:
-    types: [completed]
+    types: [rerequested,completed]
 
 jobs:
   apply_label_merged:
