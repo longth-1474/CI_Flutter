@@ -1,0 +1,79 @@
+name: Build & Release IOS
+on:
+  pull_request:
+    branches: [ develop ]
+
+jobs:
+  build_app:
+    name: Build IPA
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        os: [macos-latest]
+        include:
+          - os: macos-latest
+            flutter_path: /opt/hostedtoolcache/flutter
+      fail-fast: false
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: Cache Flutter dependencies
+        uses: actions/cache@v1
+        with:
+          path: ${{ matrix.flutter_path }}
+          key: ${{ runner.OS }}-flutter-install-cache-${{ env.flutter_version }}
+
+      - uses: subosito/flutter-action@v1
+        with:
+          flutter-version: '1.17.2'
+          channel: 'stable'
+      - run: |
+          flutter pub get
+          flutter pub cache repair
+          flutter pub run build_runner clean
+          flutter pub run build_runner build --delete-conflicting-outputs
+
+      - name: CocoaPod Install
+        run: cd ios && pod install
+
+      - name: Install FirebaseCLI
+        run: npm install -g firebase-tools
+
+      - name: Decrypt Provisioning
+        run:  |
+          echo "${{ secrets.PROVISIONING_DEV }}" > Monoful_Dev.mobileprovision.txt
+          base64 --decode Monoful_Dev.mobileprovision.txt > Monoful_Dev.mobileprovision
+
+      - name: Decrypt APNS P12 DEV
+        run: |
+          echo "${{ secrets.APNS_P12_DEV }}" > APNS_DEV.p12.txt
+          base64 --decode APNS_DEV.p12.txt > APNS_DEV.p12
+
+      - name: Decrypt GoogleService Dev
+        run:  |
+          echo "${{ secrets.GOOGLE_SERVICE_DEV }}" > GoogleService-Info.plist.txt
+          base64 --decode GoogleService-Info.plist.txt > GoogleService-Info.plist
+          echo GoogleService-Info.plist > ./ios/Runner/GoogleServices/Dev/GoogleService-Info.plist
+
+      - name: Decrypt GoogleService Staging
+        run: |
+          echo "${{ secrets.GOOGLE_SERVICE_STAGING }}" > GoogleService-Info.plist.txt
+          base64 --decode GoogleService-Info.plist.txt > GoogleService-Info.plist
+          echo GoogleService-Info.plist > ./ios/Runner/GoogleServices/Staging/GoogleService-Info.plist
+
+      - name: Decrypt GoogleService Prod
+        run: |
+          echo "${{ secrets.GOOGLE_SERVICE_PRD }}" > GoogleService-Info.plist.txt
+          base64 --decode GoogleService-Info.plist.txt > GoogleService-Info.plist
+          echo GoogleService-Info.plist > ./ios/Runner/GoogleServices/Production/GoogleService-Info.plist
+
+      - name: Provisioning profile
+        run: fastlane codesigning keychain_password:${{ secrets.KEYCHAIN_PWD }}
+
+      - name: Build
+        run: fastlane buildApp
+
+      - name: Distribute
+        run: fastlane distribute app_id:${{ secrets.IOS_ID_FIREBASE_DEV }} token:${{ secrets.FIREBASE_TOKEN }}

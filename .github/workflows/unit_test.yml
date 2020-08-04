@@ -1,7 +1,8 @@
 name: Unit test
 on:
-  pull_request:
-    branches: [ develop ]
+  create:
+    tags:
+      - 'DEV*'
 
 jobs:
   build_app:
