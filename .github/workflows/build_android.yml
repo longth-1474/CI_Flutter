@@ -97,7 +97,7 @@ jobs:
           ruby-version: '2.6'
       - name: Install Dependencies
         run: gem install bundler && bundle install
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4.1.7
         with:
           name: flutterci-apk
           path: build/app/outputs/apk/develop/release/
